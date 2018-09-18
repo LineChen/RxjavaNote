@@ -16,6 +16,7 @@ import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.ObservableSource;
 import io.reactivex.Observer;
+import io.reactivex.Scheduler;
 import io.reactivex.Single;
 import io.reactivex.SingleEmitter;
 import io.reactivex.SingleObserver;
@@ -63,7 +64,12 @@ public class MainActivity extends AppCompatActivity {
 
 //        testFirst();
 
-        testSample();
+//        testSample();
+
+//        testSkip();
+
+        testSkipLast();
+
     }
 
 
@@ -128,6 +134,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void testSchedulers(){
+        //普通调度器
         Schedulers.newThread().createWorker().schedule(new Runnable() {
             @Override
             public void run() {
@@ -135,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //延时调度器
         Schedulers.computation().createWorker().schedule(new Runnable() {
             @Override
             public void run() {
@@ -142,6 +150,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }, 3000, TimeUnit.MILLISECONDS);
 
+        //延时周期调度器
         Schedulers.computation().createWorker().schedulePeriodically(new Runnable() {
             @Override
             public void run() {
@@ -428,22 +437,62 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
+    int i = 0;
     public void testSample(){
+        //每两秒拉取一次数据
         Observable.create(new ObservableOnSubscribe<Integer>() {
             @Override
             public void subscribe(final ObservableEmitter<Integer> e) throws Exception {
-                Schedulers.newThread().createWorker().schedule(new Runnable() {
+                final Scheduler.Worker worker = Schedulers.newThread().createWorker();
+                worker.schedulePeriodically(new Runnable() {
                     @Override
                     public void run() {
-                        e.onNext((int) (Math.random() * 100));
+                        e.onNext(i++);
+                        if(i == 50){
+                            worker.dispose();
+                        }
                     }
-                }, 1, TimeUnit.SECONDS);
+                }, 1, 1,  TimeUnit.SECONDS);
             }
-        }).sample(3, TimeUnit.SECONDS)
+        }).sample(2, TimeUnit.SECONDS)
         .doOnNext(new Consumer<Integer>() {
             @Override
             public void accept(Integer integer) throws Exception {
                 Log.e(TAG, "sample:" + integer);
+            }
+        }).subscribe();
+    }
+
+    public void testSkip(){
+        Observable.just(1, 2, 3, 4, 5)
+                .skip(3)
+                .doOnNext(new Consumer<Integer>() {
+                    @Override
+                    public void accept(Integer integer) throws Exception {
+                        Log.e(TAG, "skip:" + integer);
+                    }
+                }).subscribe();
+    }
+
+    public void testSkipLast(){
+        Observable.create(new ObservableOnSubscribe<Integer>() {
+            @Override
+            public void subscribe(final ObservableEmitter<Integer> e) throws Exception {
+                final Scheduler.Worker worker = Schedulers.newThread().createWorker();
+                worker.schedulePeriodically(new Runnable() {
+                    @Override
+                    public void run() {
+                        e.onNext(i++);
+                        if(i == 50){
+                            worker.dispose();
+                        }
+                    }
+                }, 1, 1,  TimeUnit.SECONDS);
+            }
+        }).skipLast(40).doOnNext(new Consumer<Integer>() {
+            @Override
+            public void accept(Integer integer) throws Exception {
+                Log.e(TAG, "skipLast:" + integer);
             }
         }).subscribe();
     }
