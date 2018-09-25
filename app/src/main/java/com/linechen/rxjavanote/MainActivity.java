@@ -24,6 +24,7 @@ import io.reactivex.SingleOnSubscribe;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Action;
+import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
@@ -68,8 +69,13 @@ public class MainActivity extends AppCompatActivity {
 
 //        testSkip();
 
-        testSkipLast();
+//        testSkipLast();
 
+//        testTake();
+
+//        testJoin();
+
+        testMerge();
     }
 
 
@@ -496,4 +502,78 @@ public class MainActivity extends AppCompatActivity {
             }
         }).subscribe();
     }
+
+    public void testTake(){
+        /**
+         * 只发射前面的N项数据
+         */
+        Observable.just(1, 2, 3,  4)
+                .take(2)
+                .doOnNext(new Consumer<Integer>() {
+                    @Override
+                    public void accept(Integer integer) throws Exception {
+                        Log.e(TAG, "take:" + integer);
+                    }
+                }).subscribe();
+
+        Observable.just(1, 2, 3, 4, 5)
+                .takeLast(3)
+                .doOnNext(new Consumer<Integer>() {
+                    @Override
+                    public void accept(Integer integer) throws Exception {
+                        Log.e(TAG, "takeLast:" + integer);
+                    }
+                }).subscribe();
+    }
+
+
+    /**
+     * 组合操作
+     */
+    public void testJoin(){
+        Observable<String> character = Observable.just("a", "b", "c", "d");
+        Observable.just(1, 2, 3)
+                .join(character, new Function<Integer, ObservableSource<Long>>() {
+                    @Override
+                    public ObservableSource<Long> apply(Integer integer) throws Exception {
+                        return Observable.timer(3, TimeUnit.SECONDS);
+                    }
+                }, new Function<String, ObservableSource<Long>>() {
+                    @Override
+                    public ObservableSource<Long> apply(String s) throws Exception {
+                        return Observable.timer(1, TimeUnit.SECONDS);
+                    }
+                }, new BiFunction<Integer, String, String>() {
+                    @Override
+                    public String apply(Integer integer, String s) throws Exception {
+                        return integer + s;
+                    }
+                }).doOnNext(new Consumer<String>() {
+            @Override
+            public void accept(String s) throws Exception {
+                Log.e(TAG, "join: " + s);
+            }
+        }).subscribe();
+    }
+
+    public void testMerge(){
+        Observable<Integer> o1 = Observable.just(1, 2, 3, 4);
+        Observable<Integer> o2 = Observable.just(6, 7, 8);
+        Observable.merge(o1, o2)
+                .doOnNext(new Consumer<Integer>() {
+                    @Override
+                    public void accept(Integer integer) throws Exception {
+                        Log.e(TAG, "merge:" + integer);
+                    }
+                }).subscribe();
+
+        o2.mergeWith(o1).subscribe(new Consumer<Integer>() {
+            @Override
+            public void accept(Integer integer) throws Exception {
+                Log.e(TAG, "mergeWith:" + integer);
+            }
+        });
+    }
+
+
 }
