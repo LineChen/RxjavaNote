@@ -75,7 +75,13 @@ public class MainActivity extends AppCompatActivity {
 
 //        testJoin();
 
-        testMerge();
+//        testMerge();
+
+//        testCatch();
+
+        testRetry();
+
+
     }
 
 
@@ -575,5 +581,178 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * 错误处理
+     */
+        public void testCatch(){
+            //onErrorReturn: 让Observable遇到错误时发射一个特殊的项并且正常终止。
+            Observable.create(new ObservableOnSubscribe<Integer>() {
+                @Override
+                public void subscribe(ObservableEmitter<Integer> e) throws Exception {
+                    e.onNext(1);
+                    e.onNext(2);
+                    throw new NumberFormatException();
+                }
+            }).onErrorReturn(new Function<Throwable, Integer>() {
+                        @Override
+                        public Integer apply(Throwable throwable) throws Exception {
+                            return -1;
+                        }
+                    }).doOnNext(new Consumer<Integer>() {
+                @Override
+                public void accept(Integer integer) throws Exception {
+                    if(integer == -1){
+                        Log.e(TAG, "onErrorReturn: error" + integer);
+                    } else {
+                        Log.e(TAG, "onErrorReturn:" + integer);
+                    }
+                }
+            }).subscribe();
+
+            //onErrorResumeNext: 让Observable在遇到错误时开始发射第二个Observable的数据序列。
+            Observable.create(new ObservableOnSubscribe<Integer>() {
+                @Override
+                public void subscribe(ObservableEmitter<Integer> e) throws Exception {
+                    e.onNext(1);
+                    e.onNext(2);
+                    throw new NumberFormatException();
+                }
+            }).onErrorResumeNext(new Observable<Integer>() {
+                @Override
+                protected void subscribeActual(Observer<? super Integer> observer) {
+                    observer.onNext(3);
+                    observer.onNext(4);
+                    observer.onComplete();
+                }
+            }).doOnNext(new Consumer<Integer>() {
+                @Override
+                public void accept(Integer integer) throws Exception {
+                    Log.e(TAG, "onErrorResumeNext:" + integer) ;
+                }
+            }).subscribe();
+
+        }
+
+        int times = 0;
+        private static final int TRY_COUNT = 4;
+        public void testRetry(){
+            //接受单个count参数的retry会最多重新订阅指定的次数，如果次数超了，它不会尝试再次订阅，它会把最新的一个onError通知传递给它的观察者。
+            Observable.create(new ObservableOnSubscribe<Integer>() {
+                @Override
+                public void subscribe(ObservableEmitter<Integer> e) throws Exception {
+                    e.onNext(1);
+                    e.onError(new Throwable("error"));
+                    e.onNext(2);
+                    e.onNext(3);
+                }
+            }).retry(3).subscribe(new Consumer<Integer>() {
+                @Override
+                public void accept(Integer integer) throws Exception {
+                    Log.e(TAG, "retry:" + integer);
+                }
+            }, new Consumer<Throwable>() {
+                @Override
+                public void accept(Throwable throwable) throws Exception {
+                    Log.e(TAG, "retry error:" + throwable.getMessage());
+                }
+            });
+
+            //retry还有一个版本的retry接受一个谓词函数作为参数，这个函数的两个参数是：重试次数和导致发射onError通知的Throwable。
+            // 这个函数返回一个布尔值，如果返回true，retry应该再次订阅和镜像原始的Observable，如果返回false，
+            // retry会将最新的一个onError通知传递给它的观察者。
+            Observable.create(new ObservableOnSubscribe<Integer>() {
+                @Override
+                public void subscribe(ObservableEmitter<Integer> e) throws Exception {
+                    e.onNext(1);
+                    e.onError(new Throwable("error"));
+                    e.onNext(2);
+                    e.onNext(3);
+                }
+            }).retry(new Predicate<Throwable>() {
+                @Override
+                public boolean test(Throwable throwable) throws Exception {
+                    long currentTimeMillis = System.currentTimeMillis();
+                    Log.e(TAG, "retry2:" + currentTimeMillis);
+                    return currentTimeMillis % 2 == 0;
+                }
+            }).subscribe(new Consumer<Integer>() {
+                @Override
+                public void accept(Integer integer) throws Exception {
+                    Log.e(TAG, "retry2:" + integer);
+                }
+            }, new Consumer<Throwable>() {
+                @Override
+                public void accept(Throwable throwable) throws Exception {
+                    Log.e(TAG, "retry2 error:" + throwable.getMessage());
+                }
+            });
+
+            //retrywhen
+
+            Observable.create(new ObservableOnSubscribe<String>() {
+                @Override
+                public void subscribe(ObservableEmitter<String> e) throws Exception {
+                    if(times == TRY_COUNT){
+                        e.onNext("success");
+                    } else {
+                        e.onError(new Throwable("failure"));
+                    }
+                }
+            }).retryWhen(new Function<Observable<Throwable>, ObservableSource<?>>() {
+                @Override
+                public ObservableSource<?> apply(Observable<Throwable> attempts ) throws Exception {
+                    return attempts.flatMap(new Function<Throwable, ObservableSource<?>>() {
+                        @Override
+                        public ObservableSource<?> apply(Throwable throwable) throws Exception {
+                            if(++times <= TRY_COUNT){
+                                Log.e(TAG, "retrywhen: retry->" + times);
+                                return Observable.timer(2000, TimeUnit.MILLISECONDS);
+                            } else {
+                                return Observable.error(throwable);
+                            }
+                        }
+                    });
+                }
+            }).subscribe(new Consumer<String>() {
+                @Override
+                public void accept(String integer) throws Exception {
+                    Log.e(TAG, "retrywhen:" + integer);
+                }
+            }, new Consumer<Throwable>() {
+                @Override
+                public void accept(Throwable throwable) throws Exception {
+                    Log.e(TAG, "retrywhen:" + throwable.getMessage());
+                }
+            });
+        }
+
+
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
