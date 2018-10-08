@@ -30,6 +30,7 @@ import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
 import io.reactivex.observables.GroupedObservable;
 import io.reactivex.schedulers.Schedulers;
+import io.reactivex.schedulers.Timed;
 import io.reactivex.subjects.AsyncSubject;
 
 public class MainActivity extends AppCompatActivity {
@@ -79,8 +80,9 @@ public class MainActivity extends AppCompatActivity {
 
 //        testCatch();
 
-        testRetry();
+//        testRetry();
 
+        testDelay();
 
     }
 
@@ -726,7 +728,27 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
+        public void testDelay(){
+            Observable.just(1, 2, 3)
+                    .delay(2000, TimeUnit.MILLISECONDS)
+                    .subscribe(new Consumer<Integer>() {
+                        @Override
+                        public void accept(Integer integer) throws Exception {
+                            Log.e(TAG, "delay:" + integer);
+                        }
+                    });
+        }
 
+        public void testTimeInterval(){
+            Observable.just(1, 2, 3, 4, 5)
+                    .timeInterval(TimeUnit.MILLISECONDS)
+                    .subscribe(new Consumer<Timed<Integer>>() {
+                        @Override
+                        public void accept(Timed<Integer> integerTimed) throws Exception {
+
+                        }
+                    });
+        }
 
 }
 
