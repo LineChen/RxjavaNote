@@ -8,6 +8,7 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -82,8 +83,9 @@ public class MainActivity extends AppCompatActivity {
 
 //        testRetry();
 
-        testDelay();
+//        testDelay();
 
+        testTo();
     }
 
 
@@ -748,6 +750,39 @@ public class MainActivity extends AppCompatActivity {
 
                         }
                     });
+        }
+
+
+        public void testTo(){
+//            String to = Observable.just(1, 2, 3)
+//                    .to(new Function<Observable<Integer>, String>() {
+//                        @Override
+//                        public String apply(Observable<Integer> integerObservable) throws Exception {
+//                            return "yes";
+//                        }
+//                    });
+//            Log.e(TAG, "to:" + to);
+
+            Observable.just(1, 2, 3, 4)
+                    .toList().subscribe(new Consumer<List<Integer>>() {
+                @Override
+                public void accept(List<Integer> integers) throws Exception {
+                    Log.e(TAG, Arrays.toString(integers.toArray()));
+                }
+            });
+
+            Observable.just(1, 2, 3)
+                    .toMap(new Function<Integer, String>() {
+                        @Override
+                        public String apply(Integer integer) throws Exception {
+                            return String.valueOf(integer);
+                        }
+                    }).subscribe(new Consumer<Map<String, Integer>>() {
+                @Override
+                public void accept(Map<String, Integer> stringIntegerMap) throws Exception {
+                    Log.e(TAG, "to map:" + stringIntegerMap.size());
+                }
+            });
         }
 
 }
